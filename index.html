@@ -61,44 +61,15 @@
     	retpoint.y = (y1+y2)/2;
     	return retpoint;
     }
-    //Function to separate out shapes within a sketch
-    function shapeSeparate(corners, allPoints)
+
+    function checkForLine(allPoints, workingCorner, nearestCorner)
     {
-    	threshold = 1;
-    	var shapesList = [];
-    	//go through every corner in the sketch
-    	for(int i = 0; i < corners.length; i++)
-    	{
-    		//Get corner you're working with
-    		workingCorner = corners[i];
-    		//Reset Distance
-    		nearestDist = 9999;
-    		//reset corner
-    		var nearestCorner = corners[i]; 
-    		//Find all corners except the one you're using
-    		for(int j = 0; j < corners.length; j++)
-    		{
-    			//Set current corner
-    			currentCorner = corners[j];
-    			//Make sure current corner isn't the one you're measuring from
-    			if(currentCorner == workingCorner)
-    			{
-    				continue;
-    			}
-    			//Find euclidean distance between corner you're working with and
-    			//the current corner
-    			currentDist = euclideanDist(workingCorner, currentCorner);
-    			if(currentDist < nearestDist)
-    			{
-    				nearestDist = currentDist;
-    				nearestCorner = currentCorner;
-    			}
-    		}
-    		//Get midpoint, then quarterpoint, then three quarters point
+    	//Get midpoint, then quarterpoint, then three quarters point
     		//between A and B
     		mid = midpoint(workingCorner,nearestCorner);
     		quarter = midpoint(workingCorner,mid);
     		threeQuarter = midpoint(mid, nearestCorner);
+    		isALine = false;
 
     		//Check if quarter point is within threshold in points list
     		quarterLowx = quarter.x - threshold;
@@ -134,12 +105,52 @@
     				threeQuarterExists = true;
     			}
     		}
-    		alreadyExists = false;
     		//if you don't find a line, exit
-    		if(quarterExists==false && threeQuarterExists == false)
+    		if(quarterExists==true && threeQuarterExists == true)
+    		{
+    			isALine = true;
+    		}
+    	return isALine;
+    }
+    //Function to separate out shapes within a sketch
+    function shapeSeparate(corners, allPoints)
+    {
+    	threshold = 1;
+    	var shapesList = [];
+    	//go through every corner in the sketch
+    	for(int i = 0; i < corners.length; i++)
+    	{
+    		//Get corner you're working with
+    		workingCorner = corners[i];
+    		//Reset Distance
+    		nearestDist = 9999;
+    		//reset corner
+    		var nearestCorner = corners[i]; 
+    		//Find all corners except the one you're using
+    		for(int j = 0; j < corners.length; j++)
+    		{
+    			//Set current corner
+    			currentCorner = corners[j];
+    			//Make sure current corner isn't the one you're measuring from
+    			if(currentCorner == workingCorner)
+    			{
+    				continue;
+    			}
+    			//Find euclidean distance between corner you're working with and
+    			//the current corner
+    			currentDist = euclideanDist(workingCorner, currentCorner);
+    			if(currentDist < nearestDist)
+    			{
+    				nearestDist = currentDist;
+    				nearestCorner = currentCorner;
+    			}
+    		}
+    		if(checkForLine(allPoints,workingCorner,nearestCorner) == false)
     		{
     			continue;
     		}
+    		alreadyExists = false;
+    		
     		for(shape in shapesList)
     		{
     			for(point in shape)
@@ -159,7 +170,54 @@
     			shapesList.push(newShape);
     		}
     	}
+    	return shapesList;
     }
+
+    function findTriangle(corners,allPoints)
+	{
+		triangleList = [];
+	    for (var i = 0. i < corners.length; i++)
+	    {
+	        //Get corner you are working with
+	        var workingCorner = corners[i];
+	        var shortestDist = 9999;
+	        var secondShortestDist = 9999;
+	        var nearestCorner = corners[i];
+	        var secondNearestCorner = corners[i];
+	        for (var j = 0; j < corners.length; j++)
+	        {
+	            if (corners[j] == workingCorner)
+	            {
+	                continue;
+	            }
+
+	           currentDist = euclideanDist(workingCorner, corners[j]);
+
+	            if (currentDist < shortestDist)
+	            {
+	                shortestDist = currentDist;
+	                nearestCorner = corners[j];
+	            }
+	            else if (currentDist < secondShortestDist)
+	            {
+	                secondShortestDist = currentDist;
+	                secondNearestCorner = corners[j];
+	            }
+	        }
+	        lineAB = checkForLine(allPoints,workingCorner,nearestCorner);
+	        lineAC = checkForLine(allPoints,workingCorner,secondNearestCorner);
+	        lineBC = checkForLine(allPoints,nearestCorner,secondNearestCorner);
+	        if(lineAB == true && lineAC == true && lineBC == true)
+	        {
+	        	triangle = [];
+	        	triangle.push(workingCorner);
+	        	triangle.push(nearestCorner);
+	        	triangle.push(secondNearestCorner);
+	        	triangleList.push(triangle);
+	        }
+	    }
+	    return triangleList;
+	}
     //Need to keep count of pops of Json
     //This is complex (running time) NEED TO BE FIXED
     function pop(sketchList){
