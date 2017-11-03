@@ -35,6 +35,131 @@
         }
 
     }
+
+    function euclideanDist(pointA, pointB)
+    {
+    	x1 = pointA.x;
+    	x2 = pointB.x;
+    	y1 = pointA.y;
+    	y2 = pointB.y;
+    	first = x2 - x1;
+    	second = y2 - y1;
+    	firstSquared = Math.pow(first, 2);
+    	secondSquared = Math.pow(second, 2);
+    	ret = Math.sqrt(firstSquared + secondSquared);
+    	return ret;
+    }
+
+    function midpoint(pointA, pointB)
+    {
+    	retpoint = pointA;
+    	x1 = pointA.x;
+    	x2 = pointB.x;
+    	y1 = pointA.y;
+    	y2 = pointB.y;
+    	retpoint.x = (x1+x2)/2;
+    	retpoint.y = (y1+y2)/2;
+    	return retpoint;
+    }
+    //Function to separate out shapes within a sketch
+    function shapeSeparate(corners, allPoints)
+    {
+    	threshold = 1;
+    	var shapesList = [];
+    	//go through every corner in the sketch
+    	for(int i = 0; i < corners.length; i++)
+    	{
+    		//Get corner you're working with
+    		workingCorner = corners[i];
+    		//Reset Distance
+    		nearestDist = 9999;
+    		//reset corner
+    		var nearestCorner = corners[i]; 
+    		//Find all corners except the one you're using
+    		for(int j = 0; j < corners.length; j++)
+    		{
+    			//Set current corner
+    			currentCorner = corners[j];
+    			//Make sure current corner isn't the one you're measuring from
+    			if(currentCorner == workingCorner)
+    			{
+    				continue;
+    			}
+    			//Find euclidean distance between corner you're working with and
+    			//the current corner
+    			currentDist = euclideanDist(workingCorner, currentCorner);
+    			if(currentDist < nearestDist)
+    			{
+    				nearestDist = currentDist;
+    				nearestCorner = currentCorner;
+    			}
+    		}
+    		//Get midpoint, then quarterpoint, then three quarters point
+    		//between A and B
+    		mid = midpoint(workingCorner,nearestCorner);
+    		quarter = midpoint(workingCorner,mid);
+    		threeQuarter = midpoint(mid, nearestCorner);
+
+    		//Check if quarter point is within threshold in points list
+    		quarterLowx = quarter.x - threshold;
+    		quarterLowy = quarter.y - threshold;
+    		quarterHighx = quarter.x + threshold;
+    		quarterHighy = quarter.y + threshold;
+    		quarterExists = false;
+
+    		threeQuarterLowx = threeQuarter.x - threshold;
+    		threeQuarterLowy = threeQuarter.y - threshold;
+    		threeQuarterHighx = threeQuarter.x + threshold;
+    		threeQuarterHighy = threeQuarter.y + threshold;
+    		threeQuarterExists = false;
+
+    		for(point in allPoints)
+    		{
+    			//If qp is within threshold of a point in sketch, then there's a
+    			//part of a line
+    			if(quarterLowx < point.x &&
+    				point.x < quarterHighx &&
+    				quarterLowy < point.y &&
+    				point.y < quarterHighy)
+    			{
+    				quarterExists = true;
+    			}
+    			//if tqp is within threhold of a point in sketch, there's a part
+    			//of a line
+    			else if(threeQuarterLowx < point.x &&
+    				point.x < threeQuarterHighx &&
+    				threeQuarterLowy < point.y &&
+    				point.y < threeQuarterHighy)
+    			{
+    				threeQuarterExists = true;
+    			}
+    		}
+    		alreadyExists = false;
+    		//if you don't find a line, exit
+    		if(quarterExists==false && threeQuarterExists == false)
+    		{
+    			continue;
+    		}
+    		for(shape in shapesList)
+    		{
+    			for(point in shape)
+    			{
+    				//If point A is already in a shape, we need only add point B
+    				if(point.x == workingCorner.x && point.y == workingCorner.y)
+    				{
+    					shape.push(nearestCorner);
+    					alreadyExists = true;
+    				}
+    			}
+    		}
+    		if(alreadyExists == false)
+    		{
+    			newShape = [];
+    			newShape.push(workingCorner);
+    			shapesList.push(newShape);
+    		}
+    	}
+    }
     //Need to keep count of pops of Json
     //This is complex (running time) NEED TO BE FIXED
     function pop(sketchList){
