@@ -22,13 +22,15 @@
         // 1)sketch
         var sketchList = readJson("trusses.json");
         //pop sketch
-        // sketch = sketchList[0];
+
         // var resampledSketch = SketchRecTools.resampleByDistance(sketch);
         trusses = [];
-        console.log(resampledSketch);
+        // console.log(resampledSketch);
         //resample sketch
+        count = 0;
         while(count != sketchList.length){
             arrayOfStroke = [];
+            sketch = sketchList[count];
             var tof;
             var resampledSketch = SketchRecTools.resampleByDistance(sketch);
             //2) find corners
@@ -40,9 +42,16 @@
                     allPoints.push(resampledSketch.strokes[n].points[m]);
                 }
             }
+            //console.log(allPoints);
+            //console.log("Hello");
             shapesList = shapeSeparate(corners,allPoints);
+            console.log(shapesList);
             //4) triangle
             triangleList = findTriangle(corners,allPoints,shapesList);
+            if (triangleList.length!=0){
+                console.log(triangleList);
+            }
+
             //5) go through each strokes in sketch for each corner in triangleList
             for(var n in resampledSketch.strokes){
                 for(var m in resampledSketch.strokes[n].points){
@@ -79,10 +88,14 @@
     	ret = Math.sqrt(firstSquared + secondSquared);
     	return ret;
     }
-
+    function node(){
+        this.x = 0;
+        this.y=0;
+        this.time =0;
+    }
     function midpoint(pointA, pointB)
     {
-    	retpoint = pointA;
+    	retpoint = new node();
     	x1 = pointA.x;
     	x2 = pointB.x;
     	y1 = pointA.y;
@@ -92,7 +105,7 @@
     	return retpoint;
     }
 
-    function checkForLine(allPoints, workingCorner, nearestCorner)
+    function checkForLine(allPoints, workingCorner, nearestCorner, threshold)
     {
     	//Get midpoint, then quarterpoint, then three quarters point
     		//between A and B
@@ -102,6 +115,7 @@
     		isALine = false;
 
     		//Check if quarter point is within threshold in points list
+            //where is threshold?
     		quarterLowx = quarter.x - threshold;
     		quarterLowy = quarter.y - threshold;
     		quarterHighx = quarter.x + threshold;
@@ -114,26 +128,30 @@
     		threeQuarterHighy = threeQuarter.y + threshold;
     		threeQuarterExists = false;
 
+
     		for(point in allPoints)
     		{
+
     			//If qp is within threshold of a point in sketch, then there's a
     			//part of a line
-    			if(quarterLowx < point.x &&
-    				point.x < quarterHighx &&
-    				quarterLowy < point.y &&
-    				point.y < quarterHighy)
+    			if((quarterLowx < allPoints[point].x) &&
+    				(allPoints[point].x < quarterHighx) &&
+    				(quarterLowy < allPoints[point].y) &&
+    				(allPoints[point].y < quarterHighy))
     			{
+
     				quarterExists = true;
     			}
     			//if tqp is within threhold of a point in sketch, there's a part
     			//of a line
-    			else if(threeQuarterLowx < point.x &&
-    				point.x < threeQuarterHighx &&
-    				threeQuarterLowy < point.y &&
-    				point.y < threeQuarterHighy)
+    			if((threeQuarterLowx < allPoints[point].x) &&
+    				(allPoints[point].x < threeQuarterHighx) &&
+    				(threeQuarterLowy < allPoints[point].y) &&
+    				(allPoints[point].y < threeQuarterHighy))
     			{
     				threeQuarterExists = true;
     			}
+                //console.log(quarterExists);
     		}
     		//if you don't find a line, exit
     		if(quarterExists==true && threeQuarterExists == true)
@@ -142,64 +160,98 @@
     		}
     	return isALine;
     }
+    function nearCorner(corners, workingCorner, allPoints, threhold){
+
+        bottomDist = 0;
+        val = false;
+        while(val == false)
+        {
+        		//Reset Distance
+        		nearestDist = 9999;
+        		//reset corner (why reset corner using the same corner?)
+        		var nearestCorner = new node();
+        		//Find all corners except the one you're using
+        		for(var j = 0; j < corners.length; j++)
+        		{
+        			//Set current corner
+        			currentCorner = corners[j];
+        			//Make sure current corner isn't the one you're measuring from
+        			if(currentCorner.x == workingCorner.x && currentCorner.y == workingCorner.y)
+        			{
+        				continue;
+        			}
+        			//Find euclidean distance between corner you're working with and
+        			//the current corner
+        			currentDist = euclideanDist(workingCorner, currentCorner);
+        			if(bottomDist < currentDist && currentDist < nearestDist)
+        			{
+        				nearestDist = currentDist;
+        				nearestCorner = currentCorner;
+        			}
+        		}
+                val = checkForLine(allPoints,workingCorner,nearestCorner,threshold);
+                if(val==false)
+                {
+                    //val = true;
+                    bottomDist=nearestDist+1;
+                }
+                else{
+                    return nearestCorner;
+                }
+
+
+            }
+
+
+        }
+
+
     //Function to separate out shapes within a sketch
     function shapeSeparate(corners, allPoints)
     {
-    	threshold = 1;
+    	threshold = 63;
     	var shapesList = [];
-    	//go through every corner in the sketch
-    	for(var i = 0; i < corners.length; i++)
-    	{
-    		//Get corner you're working with
-    		workingCorner = corners[i];
-    		//Reset Distance
-    		nearestDist = 9999;
-    		//reset corner
-    		var nearestCorner = corners[i];
-    		//Find all corners except the one you're using
-    		for(var j = 0; j < corners.length; j++)
-    		{
-    			//Set current corner
-    			currentCorner = corners[j];
-    			//Make sure current corner isn't the one you're measuring from
-    			if(currentCorner == workingCorner)
-    			{
-    				continue;
-    			}
-    			//Find euclidean distance between corner you're working with and
-    			//the current corner
-    			currentDist = euclideanDist(workingCorner, currentCorner);
-    			if(currentDist < nearestDist)
-    			{
-    				nearestDist = currentDist;
-    				nearestCorner = currentCorner;
-    			}
-    		}
-    		if(checkForLine(allPoints,workingCorner,nearestCorner) == false)
-    		{
-    			continue;
-    		}
-    		alreadyExists = false;
 
-    		for(shape in shapesList)
-    		{
-    			for(point in shape)
-    			{
-    				//If point A is already in a shape, we need only add point B
-    				if(point.x == workingCorner.x && point.y == workingCorner.y)
-    				{
-    					shape.push(nearestCorner);
-    					alreadyExists = true;
-    				}
-    			}
-    		}
-    		if(alreadyExists == false)
-    		{
-    			newShape = [];
-    			newShape.push(workingCorner);
-    			shapesList.push(newShape);
-    		}
-    	}
+    	    //if there's no line, we want to run the corner algo again but with the offending corner removed
+            //console.log(val);
+
+            //go through every corner in the sketch
+        	for(var i = 0; i < corners.length; i++)
+        	{
+        		//Get corner you're working with
+        		workingCorner = corners[i];
+                closestConnectedCorner = nearCorner(corners, workingCorner, allPoints, threshold);
+        		alreadyExists = false;
+        		for(n in shapesList)
+                {
+        			for(point in shapesList[n])
+        			{
+                        xtest = shapesList[n][point].x;
+                        ytest = shapesList[n][point].y;
+        				//If point A is already in a shape, we need only add point B
+        				if(shapesList[n][point].x == workingCorner.x && shapesList[n][point].y == workingCorner.y)
+        				{
+        					shapesList[n].push(closestConnectedCorner);
+        					alreadyExists = true;
+
+        				}
+                        else if(shapesList[n][point].x == closestConnectedCorner.x
+                            && shapesList[n][point].y == closestConnectedCorner.y)
+                        {
+                            shapesList[n].push(workingCorner);
+                            alreadyExists = true;
+                        }
+        			}
+        		}
+        		if(alreadyExists == false)
+        		{
+        			newShape = [];
+        			newShape.push(workingCorner);
+                    newShape.push(closestConnectedCorner);
+        			shapesList.push(newShape);
+                    //console.log(newShape);
+        		}
+        	}
     	return shapesList;
     }
     //returns a list of triangles corners Points
@@ -210,32 +262,32 @@
         {
             triangleCount = 0;
     		triangleList = [];
-    	    for (var i = 0; i < corners.length; i++)
+    	    for (var i = 0; i < shapesList[shape].length; i++)
     	    {
     	        //Get corner you are working with
-    	        var workingCorner = corners[i];
+    	        var workingCorner = shapesList[shape][i];
     	        var shortestDist = 9999;
     	        var secondShortestDist = 9999;
-    	        var nearestCorner = corners[i];
-    	        var secondNearestCorner = corners[i];
-    	        for (var j = 0; j < corners.length; j++)
+    	        var nearestCorner = new node();
+    	        var secondNearestCorner = new node();
+    	        for (var j = 0; j < shapesList[shape].length; j++)
     	        {
-    	            if (corners[j] == workingCorner)
+    	            if (shapesList[shape][j].x == workingCorner.x && shapesList[shape][j].y == workingCorner.y)
     	            {
     	                continue;
     	            }
 
-    	           currentDist = euclideanDist(workingCorner, corners[j]);
+    	           currentDist = euclideanDist(workingCorner, shapesList[shape][j]);
 
     	            if (currentDist < shortestDist)
     	            {
     	                shortestDist = currentDist;
-    	                nearestCorner = corners[j];
+    	                nearestCorner = shapesList[shape][j];
     	            }
     	            else if (currentDist < secondShortestDist)
     	            {
     	                secondShortestDist = currentDist;
-    	                secondNearestCorner = corners[j];
+    	                secondNearestCorner = shapesList[shape][j];
     	            }
     	        }
     	        lineAB = checkForLine(allPoints,workingCorner,nearestCorner);
