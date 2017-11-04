@@ -3,6 +3,8 @@
 <head>
    <meta charset="UTF-8">
    <title>Project 2</title>
+   <script type="text/javascript" src="IStraw.js"></script>
+   <script type="text/javascript" src="sketchTools.js"></script>
 </head>
 <body>
    <p>Hello</p>
@@ -17,21 +19,49 @@
         //Put Json file here!
         //make sure the file is in the same folder as the html file
         //sketch[n].strokes
+        // 1)sketch
         var sketchList = readJson("trusses.json");
         //pop sketch
-
-        var sketch = pop(sketchList);
-        console.log(sketch);
+        // sketch = sketchList[0];
+        // var resampledSketch = SketchRecTools.resampleByDistance(sketch);
+        trusses = [];
+        console.log(resampledSketch);
         //resample sketch
-        var resampledSketch = SketchRecTools.resampleByDistance(sketch);
-        //find corners
-        var corners = findCornersIstraw(sketch);
+        while(count != sketchList.length){
+            arrayOfStroke = [];
+            var tof;
+            var resampledSketch = SketchRecTools.resampleByDistance(sketch);
+            //2) find corners
+            var corners = findCornersIstraw(sketch);
+            //3) shape seperater
+            var allPoints=[];
+            for(var n in resampledSketch.strokes){
+                for(var m in resampledSketch.strokes[n].points){
+                    allPoints.push(resampledSketch.strokes[n].points[m]);
+                }
+            }
+            shapesList = shapeSeparate(corners,allPoints);
+            //4) triangle
+            triangleList = findTriangle(corners,allPoints,shapesList);
+            //5) go through each strokes in sketch for each corner in triangleList
+            for(var n in resampledSketch.strokes){
+                for(var m in resampledSketch.strokes[n].points){
+                    for(var j in triangleList){
+                        if(resampledSketch.strokes[n].points[m].x == triangleList[j].x && resampledSketch.strokes[n].points[m].x == triangleList[m].y){
+                            arrayOfStroke.push(resampledSketch.strokes[n].id);//array of strokes with a truss
+                            tof = true;
+                        }
+                        else{
+                            tof = false;
+                        }
+                    }
 
-        //using the corners find the two closests neighbors for each corner
-        var NearN, NearstN = Math.pow(2,32) - 1;
-        for(var k in corners){
-            corner = corners[k];
-            dist = SketchRecTools(corner.x,corner.y)
+                }
+            }
+            trusses = {Bool: tof, trussStrokes: arrayOfStroke};
+            var sketch = pop(sketchList);
+            count++;
+
         }
 
     }
@@ -118,16 +148,16 @@
     	threshold = 1;
     	var shapesList = [];
     	//go through every corner in the sketch
-    	for(int i = 0; i < corners.length; i++)
+    	for(var i = 0; i < corners.length; i++)
     	{
     		//Get corner you're working with
     		workingCorner = corners[i];
     		//Reset Distance
     		nearestDist = 9999;
     		//reset corner
-    		var nearestCorner = corners[i]; 
+    		var nearestCorner = corners[i];
     		//Find all corners except the one you're using
-    		for(int j = 0; j < corners.length; j++)
+    		for(var j = 0; j < corners.length; j++)
     		{
     			//Set current corner
     			currentCorner = corners[j];
@@ -150,7 +180,7 @@
     			continue;
     		}
     		alreadyExists = false;
-    		
+
     		for(shape in shapesList)
     		{
     			for(point in shape)
@@ -172,51 +202,67 @@
     	}
     	return shapesList;
     }
-
-    function findTriangle(corners,allPoints)
+    //returns a list of triangles corners Points
+    function findTriangle(corners,allPoints,shapesList)
 	{
-		triangleList = [];
-	    for (var i = 0. i < corners.length; i++)
-	    {
-	        //Get corner you are working with
-	        var workingCorner = corners[i];
-	        var shortestDist = 9999;
-	        var secondShortestDist = 9999;
-	        var nearestCorner = corners[i];
-	        var secondNearestCorner = corners[i];
-	        for (var j = 0; j < corners.length; j++)
-	        {
-	            if (corners[j] == workingCorner)
-	            {
-	                continue;
-	            }
+        triangleCornerList=[];
+        for(shape in shapesList)
+        {
+            triangleCount = 0;
+    		triangleList = [];
+    	    for (var i = 0; i < corners.length; i++)
+    	    {
+    	        //Get corner you are working with
+    	        var workingCorner = corners[i];
+    	        var shortestDist = 9999;
+    	        var secondShortestDist = 9999;
+    	        var nearestCorner = corners[i];
+    	        var secondNearestCorner = corners[i];
+    	        for (var j = 0; j < corners.length; j++)
+    	        {
+    	            if (corners[j] == workingCorner)
+    	            {
+    	                continue;
+    	            }
 
-	           currentDist = euclideanDist(workingCorner, corners[j]);
+    	           currentDist = euclideanDist(workingCorner, corners[j]);
 
-	            if (currentDist < shortestDist)
-	            {
-	                shortestDist = currentDist;
-	                nearestCorner = corners[j];
-	            }
-	            else if (currentDist < secondShortestDist)
-	            {
-	                secondShortestDist = currentDist;
-	                secondNearestCorner = corners[j];
-	            }
-	        }
-	        lineAB = checkForLine(allPoints,workingCorner,nearestCorner);
-	        lineAC = checkForLine(allPoints,workingCorner,secondNearestCorner);
-	        lineBC = checkForLine(allPoints,nearestCorner,secondNearestCorner);
-	        if(lineAB == true && lineAC == true && lineBC == true)
-	        {
-	        	triangle = [];
-	        	triangle.push(workingCorner);
-	        	triangle.push(nearestCorner);
-	        	triangle.push(secondNearestCorner);
-	        	triangleList.push(triangle);
-	        }
-	    }
-	    return triangleList;
+    	            if (currentDist < shortestDist)
+    	            {
+    	                shortestDist = currentDist;
+    	                nearestCorner = corners[j];
+    	            }
+    	            else if (currentDist < secondShortestDist)
+    	            {
+    	                secondShortestDist = currentDist;
+    	                secondNearestCorner = corners[j];
+    	            }
+    	        }
+    	        lineAB = checkForLine(allPoints,workingCorner,nearestCorner);
+    	        lineAC = checkForLine(allPoints,workingCorner,secondNearestCorner);
+    	        lineBC = checkForLine(allPoints,nearestCorner,secondNearestCorner);
+    	        if(lineAB == true && lineAC == true && lineBC == true)
+    	        {
+    	        	triangle = [];
+    	        	triangle.push(workingCorner);
+    	        	triangle.push(nearestCorner);
+    	        	triangle.push(secondNearestCorner);
+    	        	triangleList.push(triangle);
+                    triangleCount++;
+    	        }
+    	    }
+            if(triangleCount >= 2)
+            {
+                for (item in triangleList)
+                {
+                    for (cornerPoint in item)
+                    {
+                        triangleCornerList.push(cornerPoint);
+                    }
+                }
+            }
+        }
+	    return triangleCornerList;
 	}
     //Need to keep count of pops of Json
     //This is complex (running time) NEED TO BE FIXED
